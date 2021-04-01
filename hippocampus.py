@@ -6,6 +6,7 @@ from itertools import product
 
 import numpy as np
 import symengine as se
+from chspy import CubicHermiteSpline
 from jitcdde import input as system_input
 from neurolib.models.multimodel.builder.base.constants import EXC, INH
 from neurolib.models.multimodel.builder.base.network import (
@@ -55,7 +56,7 @@ ASWR_SF_DEFAULT_PARAMS = {
 ASWR = "aSWR"
 
 # matrix as [to, from], masses as (EXC, INH, aSWR)
-# scale by 1e3 for s -> ms
+# scale by 1e3 for kHz -> Hz
 HIPPOCAMPUS_NODE_DEFAULT_CONNECTIVITY = 1e3 * np.array(
     [[1.72, 1.24, 12.6], [8.86, 3.24, 13.44], [1.72, 5.67, 8.40]]
 )
@@ -104,7 +105,12 @@ class ZeroMeanConcatenatedInput(ConcatenatedInput):
         return sum_ - np.mean(sum_, axis=0)
 
     def as_cubic_splines(self, duration, dt):
-        raise NotImplementedError("For now...")
+        self.stim_start = None
+        self.stim_end = None
+        self._get_times(duration, dt)
+        return CubicHermiteSpline.from_data(
+            self.times, self.as_array(duration, dt)
+        )
 
 
 class HippocampalCA3Mass(NeuralMass):
@@ -414,7 +420,6 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
         "node_aswr_exc",
         "node_aswr_inh",
         "node_aswr_aswr",
-        "node_aswr_inh_syn_dep",
     ]
 
     def __init__(
@@ -452,6 +457,7 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
             aswr_mass = AntiSWRHippocampalMassNoDepression(params=aswr_params)
         elif aswr_mass_type == "variable_depression":
             aswr_mass = AntiSWRHippocampalMass(params=aswr_params)
+            self.sync_variables.append("node_aswr_inh_syn_dep")
             self.output_vars += [f"e_{ASWR}"]
         elif aswr_mass_type == "synaptic_facilitation":
             aswr_mass = AntiSWRHippocampalMassWithFacilitation(
@@ -460,6 +466,7 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
             self.output_vars += [f"e_{ASWR}", f"z_{ASWR}"]
         else:
             raise ValueError(f"Unknown type of aSWR mass: {aswr_mass_type}")
+        self.aswr_mass_type = aswr_mass_type
         aswr_mass.index = 2
         super().__init__(
             neural_masses=[pyr_mass, basket_mass, aswr_mass],
@@ -501,12 +508,13 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
                     ),
                 )
             )
-        # manually add synaptic depression on B -> A connection
-        syncs.append(
-            (
-                self.sync_symbols[f"node_aswr_inh_syn_dep_{self.index}"],
-                self.inputs[2, 1],
+        if self.aswr_mass_type == "variable_depression":
+            # manually add synaptic depression on B -> A connection
+            syncs.append(
+                (
+                    self.sync_symbols[f"node_aswr_inh_syn_dep_{self.index}"],
+                    self.inputs[2, 1],
+                )
             )
-        )
 
         return syncs
