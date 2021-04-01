@@ -1,0 +1,11 @@
+black
+flake8
+isort
+jupyterlab
+matplotlib
+neurolib
+numpy
+scipy
+seaborn
+symengine
+xarray
