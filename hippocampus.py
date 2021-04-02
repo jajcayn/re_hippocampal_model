@@ -6,14 +6,14 @@ from itertools import product
 
 import numpy as np
 import symengine as se
-from chspy import CubicHermiteSpline
 from jitcdde import input as system_input
 from neurolib.models.multimodel.builder.base.constants import EXC, INH
 from neurolib.models.multimodel.builder.base.network import (
     SingleCouplingExcitatoryInhibitoryNode,
 )
 from neurolib.models.multimodel.builder.base.neural_mass import NeuralMass
-from neurolib.utils.stimulus import ConcatenatedInput, ModelInput
+
+from model_input import PoissonNoiseWithExpKernel, ZeroMeanConcatenatedInput
 
 PYR_DEFAULT_PARAMS = {
     "tau": 3.0,  # ms
@@ -60,57 +60,6 @@ ASWR = "aSWR"
 HIPPOCAMPUS_NODE_DEFAULT_CONNECTIVITY = 1e3 * np.array(
     [[1.72, 1.24, 12.6], [8.86, 3.24, 13.44], [1.72, 5.67, 8.40]]
 )
-
-
-class PoissonNoiseWithExpKernel(ModelInput):
-    """
-    Poissoin noise with exponential kernel
-    """
-
-    def __init__(self, freq, amp, tau_syn, seed=None):
-        self.freq = freq
-        self.amp = amp
-        self.tau_syn = tau_syn
-        super().__init__(num_iid=1, seed=seed)
-
-    def generate_input(self, duration, dt):
-        self._get_times(duration=duration, dt=dt)
-        x = np.zeros((self.times.shape[0]))
-        return self.poisson_exp_kernel(
-            x, self.times, self.freq, self.amp, self.tau_syn
-        )[:, np.newaxis]
-
-    @staticmethod
-    def poisson_exp_kernel(x, times, freq, amp, tau_syn):
-        """
-        Generation of Poisson spiking noise, convoluted with exponential kernel.
-        """
-        total_spikes = int(freq * (times[-1] - times[0]) / 1000.0)  # in seconds
-        spike_indices = np.random.choice(len(x), total_spikes, replace=True)
-        x[spike_indices] = 1.0
-        time_spike_end = -tau_syn * np.log(0.001)
-        arg_spike_end = np.argmin(np.abs(times - time_spike_end))
-        spike_kernel = np.exp(-times[:arg_spike_end] / tau_syn)
-        x = np.convolve(x, spike_kernel, mode="same")
-        return x * amp
-
-
-class ZeroMeanConcatenatedInput(ConcatenatedInput):
-    """
-    Concatenated input, i.e. sum with subtraction of the mean.
-    """
-
-    def as_array(self, duration, dt):
-        sum_ = super().as_array(duration, dt)
-        return sum_ - np.mean(sum_, axis=0)
-
-    def as_cubic_splines(self, duration, dt):
-        self.stim_start = None
-        self.stim_end = None
-        self._get_times(duration, dt)
-        return CubicHermiteSpline.from_data(
-            self.times, self.as_array(duration, dt)
-        )
 
 
 class HippocampalCA3Mass(NeuralMass):
