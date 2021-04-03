@@ -69,7 +69,9 @@ class PeriodicRandomSquareInput(StimulusInput):
     Square pulse with random timing.
     """
 
-    def __init__(self, step_size, step_duration, step_period, seed=None):
+    def __init__(
+        self, step_size, step_duration, step_period, max_jitter, seed=None
+    ):
         """
         :param step_size: size of the stimulus
         :type step_size: float
@@ -77,10 +79,13 @@ class PeriodicRandomSquareInput(StimulusInput):
         :type step_duration: float
         :param step_period: period of the square stimilus, in miliseconds
         :type step_period: float
+        :param max_jitter: maximum random jitter for pulse start, in miliseconds
+        :type max_jitter: float|int
         """
         self.step_size = step_size
         self.step_duration = step_duration
         self.step_period = step_period
+        self.max_jitter = max_jitter
         super().__init__(
             stim_start=None,
             stim_end=None,
@@ -89,11 +94,30 @@ class PeriodicRandomSquareInput(StimulusInput):
         )
 
     def generate_input(self, duration, dt):
+        """
+        Vectorized way of finding indices of stimulation from
+        https://stackoverflow.com/a/38924976
+        """
         self._get_times(duration=duration, dt=dt)
         # get periodic stimuli
         stim_times = np.arange(
             self.step_period, self.times[-1], self.step_period
         )
-        # get random delay in [0, 90] ms
-        jitters = np.random.randint(91, size=len(stim_times))
+        # get random delay in [0, max_jitter] ms
+        jitters = np.random.randint(int(self.max_jitter), size=len(stim_times))
         stim_times += jitters
+        # indices of stimulation start
+        stim_idx = (stim_times / dt).astype(int)
+        # find all indices with stimulation step
+        counts = (np.ones_like(stim_times) * (self.step_period / dt)).astype(
+            int
+        )
+        idx = np.ones(counts.sum(), dtype=int)
+        idx[np.cumsum(counts)[:-1]] -= counts[:-1]
+        idx = np.cumsum(idx) - 1 + np.repeat(stim_idx, counts)
+        # cut the end if necessary
+        idx = idx[idx < self.times.shape[0]]
+        x = np.zeros_like(self.times)
+        # assign step size
+        x[idx] = self.step_size
+        return x[:, np.newaxis]
