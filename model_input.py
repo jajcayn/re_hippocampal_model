@@ -9,7 +9,7 @@ from neurolib.utils.stimulus import ConcatenatedInput, ModelInput, StimulusInput
 
 class PoissonNoiseWithExpKernel(ModelInput):
     """
-    Poissoin noise with exponential kernel.
+    Poisson noise with exponential kernel.
     """
 
     def __init__(self, freq, amp, tau_syn, seed=None):
@@ -94,30 +94,20 @@ class PeriodicRandomSquareInput(StimulusInput):
         )
 
     def generate_input(self, duration, dt):
-        """
-        Vectorized way of finding indices of stimulation from
-        https://stackoverflow.com/a/38924976
-        """
         self._get_times(duration=duration, dt=dt)
         # get periodic stimuli
         stim_times = np.arange(
             self.step_period, self.times[-1], self.step_period
         )
         # get random delay in [0, max_jitter] ms
-        jitters = np.random.randint(int(self.max_jitter), size=len(stim_times))
-        stim_times += jitters
-        # indices of stimulation start
-        stim_idx = (stim_times / dt).astype(int)
-        # find all indices with stimulation step
-        counts = (np.ones_like(stim_times) * (self.step_period / dt)).astype(
-            int
+        jitters = np.random.randint(
+            int(self.max_jitter) + 1, size=len(stim_times)
         )
-        idx = np.ones(counts.sum(), dtype=int)
-        idx[np.cumsum(counts)[:-1]] -= counts[:-1]
-        idx = np.cumsum(idx) - 1 + np.repeat(stim_idx, counts)
-        # cut the end if necessary
-        idx = idx[idx < self.times.shape[0]]
+        stim_times += jitters
         x = np.zeros_like(self.times)
-        # assign step size
-        x[idx] = self.step_size
+        for stim_time in stim_times:
+            x[
+                (self.times >= stim_time)
+                & (self.times <= (stim_time + self.step_duration))
+            ] = self.step_size
         return x[:, np.newaxis]
