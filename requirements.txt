@@ -6,6 +6,7 @@ jupyterlab
 matplotlib
 neurolib
 numpy
+pytest
 scipy
 seaborn
 symengine

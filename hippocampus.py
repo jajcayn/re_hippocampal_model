@@ -42,8 +42,6 @@ ASWR_DEFAULT_PARAMS = {
     "F": 0.001,  # kHz
     "k": 0.48,  # 1/pA
     "threshold": 131.09,  # pA
-    "tau_d": 250.0,  # ms
-    "eta_d": 0.18,
 }
 
 ASWR_SF_DEFAULT_PARAMS = {
@@ -53,7 +51,13 @@ ASWR_SF_DEFAULT_PARAMS = {
     "z_max": 1.0,
 }
 
+SYN_DEP_DEFAULT_PARAMS = {
+    "tau_d": 250.0,  # ms
+    "eta_d": 0.18,
+}
+
 ASWR = "aSWR"
+eHC = "SynDep"
 
 # matrix as [to, from], masses as (EXC, INH, aSWR)
 # scale by 1e3 for kHz -> Hz
@@ -105,6 +109,7 @@ class PyramidalHippocampalMass(HippocampalCA3Mass):
         "node_exc_exc",
         "node_exc_inh",
         "node_exc_aswr",
+        "node_exc_e",
         "network_exc_exc",
     ]
     state_variable_names = ["r_mean"]
@@ -130,7 +135,8 @@ class PyramidalHippocampalMass(HippocampalCA3Mass):
             + self._soft_plus(
                 coupling_variables["node_exc_exc"]
                 + coupling_variables["network_exc_exc"]
-                - coupling_variables["node_exc_inh"]
+                - coupling_variables["node_exc_e"]
+                * coupling_variables["node_exc_inh"]
                 - coupling_variables["node_exc_aswr"]
                 + system_input(self.noise_input_idx[0])
             )
@@ -253,42 +259,30 @@ class AntiSWRHippocampalMass(BaseAntiSWRHippocampalMass):
     name = "Anti-SWR population CA3"
     label = "aSWR-HC"
 
-    num_state_variables = 2
-    state_variable_names = ["r_mean", "e"]
-    required_params = ["tau", "F", "k", "threshold", "tau_d", "eta_d"]
     required_couplings = [
         "node_aswr_exc",
         "node_aswr_inh",
         "node_aswr_aswr",
-        "node_aswr_inh_syn_dep",
+        "node_aswr_e",
     ]
 
     def __init__(self, params=None, seed=None):
         super().__init__(params=params or ASWR_DEFAULT_PARAMS, seed=seed)
 
-    def _initialize_state_vector(self):
-        super()._initialize_state_vector()
-        self.initial_state += [0.649]
-
     def _derivatives(self, coupling_variables):
-        [A, e] = self._unwrap_state_vector()
+        [A] = self._unwrap_state_vector()
         d_A = (
             -A
             + self._soft_plus(
                 coupling_variables["node_aswr_exc"]
-                - e * coupling_variables["node_aswr_inh"]
+                - coupling_variables["node_aswr_e"]
+                * coupling_variables["node_aswr_inh"]
                 - coupling_variables["node_aswr_aswr"]
                 + system_input(self.noise_input_idx[0])
             )
         ) / self.params["tau"]
 
-        d_e = (1.0 - e) / self.params["tau_d"] - (
-            self.params["eta_d"]
-            * coupling_variables["node_aswr_inh_syn_dep"]
-            * e
-        )
-
-        return [d_A, d_e]
+        return [d_A]
 
 
 class AntiSWRHippocampalMassWithFacilitation(BaseAntiSWRHippocampalMass):
@@ -300,15 +294,19 @@ class AntiSWRHippocampalMassWithFacilitation(BaseAntiSWRHippocampalMass):
     name = "Anti-SWR population CA3 with facilitation"
     label = "aSWR-HC-SF"
 
-    num_state_variables = 3
-    state_variable_names = ["r_mean", "e", "z"]
+    num_state_variables = 2
+    state_variable_names = ["r_mean", "z"]
+    required_couplings = [
+        "node_aswr_exc",
+        "node_aswr_inh",
+        "node_aswr_aswr",
+        "node_aswr_e",
+    ]
     required_params = [
         "tau",
         "F",
         "k",
         "threshold",
-        "tau_d",
-        "eta_d",
         "eta_f",
         "tau_f",
         "z_max",
@@ -319,23 +317,20 @@ class AntiSWRHippocampalMassWithFacilitation(BaseAntiSWRHippocampalMass):
 
     def _initialize_state_vector(self):
         super()._initialize_state_vector()
-        self.initial_state += [0.649, 0.0]
+        self.initial_state += [0.0]
 
     def _derivatives(self, coupling_variables):
-        [A, e, z] = self._unwrap_state_vector()
+        [A, z] = self._unwrap_state_vector()
         d_A = (
             -A
             + self._soft_plus(
                 (1.0 + z) * coupling_variables["node_aswr_exc"]
-                - e * coupling_variables["node_aswr_inh"]
+                - coupling_variables["node_aswr_e"]
+                * coupling_variables["node_aswr_inh"]
                 - coupling_variables["node_aswr_aswr"]
                 + system_input(self.noise_input_idx[0])
             )
         ) / self.params["tau"]
-
-        d_e = (1.0 - e) / self.params["tau_d"] - (
-            self.params["eta_d"] * coupling_variables["node_aswr_inh"] * e
-        )
 
         d_z = (-z / self.params["tau_f"]) + (
             self.params["eta_f"]
@@ -343,7 +338,46 @@ class AntiSWRHippocampalMassWithFacilitation(BaseAntiSWRHippocampalMass):
             * (self.params["z_max"] - z)
         )
 
-        return [d_A, d_e, d_z]
+        return [d_A, d_z]
+
+
+class SynapticDepressionHippocampus(NeuralMass):
+    """
+    Dummy mass that computes synaptic depression variable `e`. This depression
+    variable is shared over multiple connections, hence the mass.
+    """
+
+    name = "Synaptic depression in CA3"
+    label = "e-HC"
+    mass_type = eHC
+
+    num_state_variables = 1
+    num_noise_variables = 0
+
+    coupling_variables = {0: f"e_{eHC}"}
+    required_couplings = ["node_e_inh"]
+
+    state_variable_names = ["e"]
+
+    required_params = ["tau_d", "eta_d"]
+
+    def __init__(self, params=None, seed=None):
+        super().__init__(params=params or SYN_DEP_DEFAULT_PARAMS, seed=seed)
+
+    def _initialize_state_vector(self):
+        """
+        Initialize state vector.
+        """
+        self.initial_state = [0.649]
+
+    def _derivatives(self, coupling_variables):
+        [e] = self._unwrap_state_vector()
+
+        d_e = (1.0 - e) / self.params["tau_d"] - (
+            self.params["eta_d"] * coupling_variables["node_e_inh"] * e
+        )
+
+        return [d_e]
 
 
 class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
@@ -363,6 +397,7 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
         "node_exc_exc",
         "node_exc_aswr",
         "node_exc_inh",
+        "node_exc_e",
         "node_inh_exc",
         "node_inh_inh",
         "node_inh_aswr",
@@ -378,6 +413,7 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
         aswr_params=None,
         connectivity=HIPPOCAMPUS_NODE_DEFAULT_CONNECTIVITY,
         aswr_mass_type="constant_depression",
+        b_p_depression=False,
     ):
         """
         :param exc_params: parameters for the excitatory (PYR) mass
@@ -397,28 +433,59 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
                 synaptic facilitation of PYR -> aSWR treated as a dynamical
                 variable
         :type aswr_mass_type: str
+        :param b_p_depression: whether to include additional B->P synaptic
+            depression, governed by the same variable as B->A depression
+        :type b_p_depression: True
         """
+        masses = []
+        # init PYR and B-PV mass
         pyr_mass = PyramidalHippocampalMass(params=exc_params)
         pyr_mass.index = 0
+        masses.append(pyr_mass)
         basket_mass = BasketPVHippocampalMass(params=inh_params)
         basket_mass.index = 1
+        masses.append(basket_mass)
+
+        # init aSWR mass based on type
         if aswr_mass_type == "constant_depression":
             aswr_mass = AntiSWRHippocampalMassNoDepression(params=aswr_params)
+            aswr_mass.index = 2
+            masses.append(aswr_mass)
+
         elif aswr_mass_type == "variable_depression":
             aswr_mass = AntiSWRHippocampalMass(params=aswr_params)
-            self.sync_variables.append("node_aswr_inh_syn_dep")
-            self.output_vars += [f"e_{ASWR}"]
+            aswr_mass.index = 2
+            masses.append(aswr_mass)
+            e_mass = SynapticDepressionHippocampus()
+            e_mass.index = 3
+            masses.append(e_mass)
+            self.sync_variables += ["node_aswr_e", "node_e_inh"]
+            self.output_vars += [f"e_{eHC}"]
+
         elif aswr_mass_type == "synaptic_facilitation":
             aswr_mass = AntiSWRHippocampalMassWithFacilitation(
                 params=aswr_params
             )
-            self.output_vars += [f"e_{ASWR}", f"z_{ASWR}"]
+            aswr_mass.index = 2
+            masses.append(aswr_mass)
+            e_mass = SynapticDepressionHippocampus()
+            e_mass.index = 3
+            masses.append(e_mass)
+            self.sync_variables += ["node_aswr_e", "node_e_inh"]
+            self.output_vars += [f"e_{eHC}"]
         else:
             raise ValueError(f"Unknown type of aSWR mass: {aswr_mass_type}")
-        self.aswr_mass_type = aswr_mass_type
-        aswr_mass.index = 2
+
+        self.b_p_dep = b_p_depression
+
+        if len(masses) == 4:
+            # if we have also `e` mass, append unit connectivity
+            ones = np.ones((4, 4))
+            ones[:3, :3] = connectivity
+            connectivity = ones.copy()
+
         super().__init__(
-            neural_masses=[pyr_mass, basket_mass, aswr_mass],
+            neural_masses=masses,
             local_connectivity=connectivity,
             # within hippocampal node there are no local delays
             local_delays=None,
@@ -457,12 +524,24 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
                     ),
                 )
             )
-        if self.aswr_mass_type == "variable_depression":
-            # manually add synaptic depression on B -> A connection
+        # resolve B -> P depression
+        if self.b_p_dep:
+            assert len(self) == 4
+            b_p_e = self.inputs[0, 3]
+        else:
+            b_p_e = 1.0
+        syncs.append((self.sync_symbols[f"node_exc_e_{self.index}"], b_p_e))
+        if len(self) == 4:
             syncs.append(
                 (
-                    self.sync_symbols[f"node_aswr_inh_syn_dep_{self.index}"],
-                    self.inputs[2, 1],
+                    self.sync_symbols[f"node_aswr_e_{self.index}"],
+                    self.inputs[2, 3],
+                )
+            )
+            syncs.append(
+                (
+                    self.sync_symbols[f"node_e_inh_{self.index}"],
+                    self.inputs[3, 1],
                 )
             )
 
