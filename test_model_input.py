@@ -125,3 +125,7 @@ class TestPeriodicRandomSquareInput(unittest.TestCase):
             np.arange(self.DT, self.DURATION + self.DT, self.DT)
         )
         np.testing.assert_allclose(array, splines_array)
+
+
+if __name__ == "__main__":
+    unittest.main()

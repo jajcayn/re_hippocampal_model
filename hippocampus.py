@@ -437,6 +437,8 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
             depression, governed by the same variable as B->A depression
         :type b_p_depression: True
         """
+        self.output_vars = [f"r_mean_{EXC}", f"r_mean_{INH}", f"r_mean_{ASWR}"]
+
         masses = []
         # init PYR and B-PV mass
         pyr_mass = PyramidalHippocampalMass(params=exc_params)
