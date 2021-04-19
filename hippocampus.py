@@ -145,7 +145,7 @@ class BasketPVHippocampalMass(HippocampalCA3Mass):
     region of the hippocampus.
     """
 
-    name = "Basket ppopulation CA3"
+    name = "Basket population CA3"
     label = "BPV-HC"
     mass_type = INH
 
@@ -191,7 +191,7 @@ class BaseAntiSWRHippocampalMass(HippocampalCA3Mass):
     hippocampus.
     """
 
-    name = "Base Anti-SWR ppopulation CA3"
+    name = "Base Anti-SWR population CA3"
     label = "BaSWR-HC"
     mass_type = ASWR
 
@@ -222,7 +222,7 @@ class AntiSWRHippocampalMassNoDepression(BaseAntiSWRHippocampalMass):
     constant.
     """
 
-    name = "Anti-SWR without depression ppopulation CA3"
+    name = "Anti-SWR without depression population CA3"
     label = "aSWR-HC-NoDP"
 
     required_params = ["tau", "F", "k", "threshold", "e"]
@@ -250,7 +250,7 @@ class AntiSWRHippocampalMass(BaseAntiSWRHippocampalMass):
     Anti-SWR mass with synaptic depression slow variable `e`.
     """
 
-    name = "Anti-SWR ppopulation CA3"
+    name = "Anti-SWR population CA3"
     label = "aSWR-HC"
 
     num_state_variables = 2
@@ -297,7 +297,7 @@ class AntiSWRHippocampalMassWithFacilitation(BaseAntiSWRHippocampalMass):
     synaptic facilitation on the P -> A connection.
     """
 
-    name = "Anti-SWR ppopulation CA3 with facilitation"
+    name = "Anti-SWR population CA3 with facilitation"
     label = "aSWR-HC-SF"
 
     num_state_variables = 3
@@ -394,7 +394,7 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
             - variable_depression: synaptic depression BPV -> aSWR treated as a
                 slow dynamical variable
             - synaptic_facilitation: depression as variable plus additional
-                synaptic faciliation of PYR -> aSWR treated as a dynamical
+                synaptic facilitation of PYR -> aSWR treated as a dynamical
                 variable
         :type aswr_mass_type: str
         """
@@ -423,7 +423,7 @@ class HippocampalCA3Node(SingleCouplingExcitatoryInhibitoryNode):
             # within hippocampal node there are no local delays
             local_delays=None,
         )
-        # manualy set mass indices
+        # manually set mass indices
         self.excitatory_masses = [0]
         self.inhibitory_masses = [1]
         self.aswr_masses = [2]
