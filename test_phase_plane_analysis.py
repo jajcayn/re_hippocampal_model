@@ -17,9 +17,7 @@ class TestPhasePlaneAnalysis(unittest.TestCase):
         return node
 
     def test_phase_plane(self):
-        node = self._init_node(
-            HippocampalCA3Node(aswr_mass_type="constant_depression")
-        )
+        node = self._init_node(HippocampalCA3Node(constant_depression=True))
         phase_plane = PhasePlaneAnalysis(node)
         self.assertTrue(isinstance(phase_plane.ode_system, sp.Matrix))
         self.assertTrue(isinstance(phase_plane.jacobian, sp.Matrix))

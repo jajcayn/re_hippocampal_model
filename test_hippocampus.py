@@ -30,51 +30,79 @@ class TestHippocampalCA3Node(unittest.TestCase):
         return model
 
     def test_constant_depression(self):
-        node = self._init_node(
-            HippocampalCA3Node(aswr_mass_type="constant_depression")
-        )
+        node = self._init_node(HippocampalCA3Node(constant_depression=True))
         self.assertEqual(len(node), 3)
         self.assertTrue(isinstance(node._derivatives(), list))
         self.assertTrue(isinstance(node._sync(), list))
         self.assertEqual(node.num_state_variables, 3)
+        self.assertEqual(len(node._sync()), 11)
         # run
         model = self._multimodel_run(node)
         self.assertTrue(isinstance(model.xr(), xr.DataArray))
 
     def test_variable_depression(self):
-        node = self._init_node(
-            HippocampalCA3Node(aswr_mass_type="variable_depression")
-        )
+        node = self._init_node(HippocampalCA3Node(constant_depression=False))
         self.assertEqual(len(node), 4)
         self.assertTrue(isinstance(node._derivatives(), list))
         self.assertTrue(isinstance(node._sync(), list))
         self.assertEqual(node.num_state_variables, 4)
+        self.assertEqual(len(node._sync()), 13)
         # run
         model = self._multimodel_run(node)
         self.assertTrue(isinstance(model.xr(), xr.DataArray))
 
     def test_synaptic_facilitation(self):
         node = self._init_node(
-            HippocampalCA3Node(aswr_mass_type="synaptic_facilitation")
+            HippocampalCA3Node(constant_depression=True, syn_facilitation=True)
         )
         self.assertEqual(len(node), 4)
         self.assertTrue(isinstance(node._derivatives(), list))
         self.assertTrue(isinstance(node._sync(), list))
-        self.assertEqual(node.num_state_variables, 5)
+        self.assertEqual(node.num_state_variables, 4)
+        self.assertEqual(len(node._sync()), 12)
         # run
         model = self._multimodel_run(node)
         self.assertTrue(isinstance(model.xr(), xr.DataArray))
 
     def test_b_p_depression(self):
         node = self._init_node(
-            HippocampalCA3Node(
-                aswr_mass_type="variable_depression", b_p_depression=True
-            )
+            HippocampalCA3Node(constant_depression=False, b_p_depression=True)
         )
         self.assertEqual(len(node), 4)
         self.assertTrue(isinstance(node._derivatives(), list))
         self.assertTrue(isinstance(node._sync(), list))
         self.assertEqual(node.num_state_variables, 4)
+        self.assertEqual(len(node._sync()), 13)
+        # run
+        model = self._multimodel_run(node)
+        self.assertTrue(isinstance(model.xr(), xr.DataArray))
+
+    def test_depression_and_facilitation(self):
+        node = self._init_node(
+            HippocampalCA3Node(constant_depression=False, syn_facilitation=True)
+        )
+        self.assertEqual(len(node), 5)
+        self.assertTrue(isinstance(node._derivatives(), list))
+        self.assertTrue(isinstance(node._sync(), list))
+        self.assertEqual(node.num_state_variables, 5)
+        self.assertEqual(len(node._sync()), 14)
+        # run
+        model = self._multimodel_run(node)
+        self.assertTrue(isinstance(model.xr(), xr.DataArray))
+
+    def test_all_features(self):
+        node = self._init_node(
+            HippocampalCA3Node(
+                constant_depression=False,
+                syn_facilitation=True,
+                b_p_depression=True,
+            )
+        )
+        self.assertEqual(len(node), 5)
+        self.assertTrue(isinstance(node._derivatives(), list))
+        self.assertTrue(isinstance(node._sync(), list))
+        self.assertEqual(node.num_state_variables, 5)
+        self.assertEqual(len(node._sync()), 14)
         # run
         model = self._multimodel_run(node)
         self.assertTrue(isinstance(model.xr(), xr.DataArray))
