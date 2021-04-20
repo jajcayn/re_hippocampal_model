@@ -15,8 +15,8 @@ This repository contains code that replicates findings concerning sharp wave rip
 ### Locally
 Fastest, complete control, requires python et al. already set up. Currently, python versions 3.6 - 3.8 are supported.
 ```bash
-git clone ...
-cd ...
+git clone https://github.com/jajcayn/re_hippocampal_model.git
+cd re_hippocampal_model
 pip install --upgrade -r requirements.txt
 # tests, just to be sure
 pytest
