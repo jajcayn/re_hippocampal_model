@@ -5,19 +5,32 @@
 *Replication of hippocampal CA3 rate model due to Evangelista et al., J. Neurosci., 2020.*
 
 
-This repository contains code that replicates findings concerning sharp wave ripples in the CA3 region of the hippocampus using a simplified rate model.
-The accompanying paper is currently in progress.
-In order to run the code and repeat the numerical experiments, two options exist:
+This repository contains code that replicates findings concerning sharp wave ripples in the CA3 region of the hippocampus using a simplified rate model. The accompanying paper is currently in progress.
 
-1. clone and run
+## Abstract
+*WIP*
+
+## How to run
+
+### Locally
+Fastest, complete control, requires python et al. already set up.
 ```bash
-git clone https://github.com/jajcayn/re_hippocampal_model
-cd re_hippocampal_model
+git clone ...
+cd ...
 pip install --upgrade -r requirements.txt
+# tests, just to be sure
+pytest
 jupyter lab
 ```
 
-2. use prebuilt docker image [coming soon!]
+### Docker
+Easy to use, only docker required. Runs `jupyter` inside a docker container.
+```bash
+docker run -p XXXX:XXXX ...
 ```
-docker run -p <coming soon!>
-```
+and navigate to localhost:XXXX
+
+### Binder
+Easiest to use, no setup required, slowest.
+
+Just click here >>
