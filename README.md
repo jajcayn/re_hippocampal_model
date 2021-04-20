@@ -1,5 +1,5 @@
 
-[![Build Status](https://github.com/jajcayn/re_hippocampal_model/workflows/pytest/badge.svg)](https://github.com/jajcayn/re_hippocampal_model/actions) [![DOI](https://zenodo.org/badge/353683773.svg)](https://zenodo.org/badge/latestdoi/353683773)
+[![Build Status](https://github.com/jajcayn/re_hippocampal_model/workflows/pytest/badge.svg)](https://github.com/jajcayn/re_hippocampal_model/actions) [![DOI](https://zenodo.org/badge/353683773.svg)](https://zenodo.org/badge/latestdoi/353683773) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jajcayn/re_hippocampal_model/main)
 
 # [Re] Sharp wave ripples in the mass model of the hippocampus
 *Replication of hippocampal CA3 rate model due to Evangelista et al., J. Neurosci., 2020.*
@@ -33,4 +33,4 @@ and navigate to localhost:XXXX
 ### Binder
 Easiest to use, no setup required, slowest.
 
-Just click here >>
+Just click here >> [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jajcayn/re_hippocampal_model/main)
