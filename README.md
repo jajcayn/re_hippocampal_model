@@ -13,7 +13,7 @@ This repository contains code that replicates findings concerning sharp wave rip
 ## How to run
 
 ### Locally
-Fastest, complete control, requires python et al. already set up.
+Fastest, complete control, requires python et al. already set up. Currently, python versions 3.6 - 3.8 are supported.
 ```bash
 git clone ...
 cd ...
